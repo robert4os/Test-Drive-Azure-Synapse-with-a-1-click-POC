@@ -1,0 +1,17 @@
+{
+	"name": "AzureMLService_stable_demo",
+	"properties": {
+		"annotations": [],
+		"type": "AzureMLService",
+		"typeProperties": {
+			"subscriptionId": "d87daa87-2363-41a9-8ea8-3a009c8b8fe2",
+			"resourceGroupName": "stable-aml-demo",
+			"mlWorkspaceName": "stable-aml-demo",
+			"authentication": "MSI"
+		},
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
