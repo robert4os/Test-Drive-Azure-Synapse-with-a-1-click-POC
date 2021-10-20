@@ -171,11 +171,11 @@
 					"parameters": {
 						"year": {
 							"value": "2010",
-							"type": "int"
+							"type": "string"
 						},
 						"month": {
 							"value": "7",
-							"type": "int"
+							"type": "string"
 						}
 					},
 					"snapshot": true
