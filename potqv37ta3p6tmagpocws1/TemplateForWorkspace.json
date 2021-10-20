@@ -7,9 +7,29 @@
 			"metadata": "Workspace name",
 			"defaultValue": "potqv37ta3p6tmagpocws1"
 		},
+		"AzureMLService_stable_demo_servicePrincipalKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'servicePrincipalKey' of 'AzureMLService_stable_demo'"
+		},
 		"TripFaresSynapseAnalyticsLinkedService_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'TripFaresSynapseAnalyticsLinkedService'"
+		},
+		"AzureMLService_stable_demo_properties_typeProperties_subscriptionId": {
+			"type": "string",
+			"defaultValue": "d87daa87-2363-41a9-8ea8-3a009c8b8fe2"
+		},
+		"AzureMLService_stable_demo_properties_typeProperties_resourceGroupName": {
+			"type": "string",
+			"defaultValue": "stable-aml-demo"
+		},
+		"AzureMLService_stable_demo_properties_typeProperties_servicePrincipalId": {
+			"type": "string",
+			"defaultValue": "3d346348-2e2e-47c7-a0a4-f8bb9daa1e61"
+		},
+		"AzureMLService_stable_demo_properties_typeProperties_tenant": {
+			"type": "string",
+			"defaultValue": "72f988bf-86f1-41af-91ab-2d7cd011db47"
 		},
 		"HttpServerTripDataLinkedService_properties_typeProperties_url": {
 			"type": "string",
@@ -557,6 +577,247 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/TripFaresDataPipeline_Spark_Notebook')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "IngestTripDataIntoADLS",
+						"description": "Copies the trip data csv file from the git repo and loads it into the ADLS.",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.00:10:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "HttpReadSettings",
+									"requestMethod": "GET"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "tripsDataSource",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "tripDataSink",
+								"type": "DatasetReference",
+								"parameters": {
+									"datalakeAccountName": {
+										"value": "@pipeline().parameters.datalakeAccountName",
+										"type": "Expression"
+									},
+									"keyVaultName": {
+										"value": "@pipeline().parameters.KeyVaultName",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "IngestTripFaresDataIntoADLS",
+						"description": "Copies the trip fare data csv file from the git repo and loads it into the ADLS.",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.00:10:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "HttpReadSettings",
+									"requestMethod": "GET"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "faresDataSource",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "faresDataSink",
+								"type": "DatasetReference",
+								"parameters": {
+									"keyVaultName": {
+										"value": "@pipeline().parameters.KeyVaultName",
+										"type": "Expression"
+									},
+									"datalakeAccountName": {
+										"value": "@pipeline().parameters.datalakeAccountName",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "SparkNotebook",
+						"type": "SynapseNotebook",
+						"dependsOn": [
+							{
+								"activity": "IngestTripDataIntoADLS",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "IngestTripFaresDataIntoADLS",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "Spark_data_ingress_pipeline",
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"year": {
+									"value": "2010",
+									"type": "int"
+								},
+								"month": {
+									"value": "7",
+									"type": "int"
+								}
+							},
+							"snapshot": true
+						}
+					},
+					{
+						"name": "Admin Alert",
+						"type": "WebHook",
+						"dependsOn": [
+							{
+								"activity": "SparkNotebook",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"url": "https://prod-237.westeurope.logic.azure.com:443/workflows/017625c052794700811ff60a7d99750d/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=esDe5zfG3Ph4vd8wt-5D-hUlzCze4rEdSjCsktCBrG8",
+							"method": "POST",
+							"headers": {},
+							"body": {
+								"body": "spark notebook exit"
+							},
+							"timeout": "00:10:00"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"SynapseWorkspaceName": {
+						"type": "string",
+						"defaultValue": "potqv37ta3p6tmagpocws1.database.windows.net"
+					},
+					"datalakeAccountName": {
+						"type": "string",
+						"defaultValue": "potqv37ta3p6tmagpoc"
+					},
+					"KeyVaultName": {
+						"type": "string",
+						"defaultValue": "kvpotqv37ta3p6tmagpoc"
+					}
+				},
+				"folder": {
+					"name": "TripFaresDataPipeline"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/tripsDataSource')]",
+				"[concat(variables('workspaceId'), '/datasets/tripDataSink')]",
+				"[concat(variables('workspaceId'), '/datasets/faresDataSource')]",
+				"[concat(variables('workspaceId'), '/datasets/faresDataSink')]",
+				"[concat(variables('workspaceId'), '/notebooks/Spark_data_ingress_pipeline')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/AzureSynapseAnalyticsFaresData')]",
 			"type": "Microsoft.Synapse/workspaces/datasets",
 			"apiVersion": "2019-06-01-preview",
@@ -1054,6 +1315,33 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/AzureMLService_stable_demo')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureMLService",
+				"typeProperties": {
+					"subscriptionId": "[parameters('AzureMLService_stable_demo_properties_typeProperties_subscriptionId')]",
+					"resourceGroupName": "[parameters('AzureMLService_stable_demo_properties_typeProperties_resourceGroupName')]",
+					"mlWorkspaceName": "stable-aml-demo",
+					"servicePrincipalId": "[parameters('AzureMLService_stable_demo_properties_typeProperties_servicePrincipalId')]",
+					"servicePrincipalKey": {
+						"type": "SecureString",
+						"value": "[parameters('AzureMLService_stable_demo_servicePrincipalKey')]"
+					},
+					"tenant": "[parameters('AzureMLService_stable_demo_properties_typeProperties_tenant')]"
+				},
+				"connectVia": {
+					"referenceName": "IntegrationRuntime1",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/IntegrationRuntime1')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/HttpServerTripDataLinkedService')]",
 			"type": "Microsoft.Synapse/workspaces/linkedServices",
 			"apiVersion": "2019-06-01-preview",
@@ -1243,6 +1531,32 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/IntegrationRuntime1')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0,
+							"cleanup": false
+						}
+					}
+				},
+				"managedVirtualNetwork": {
+					"type": "ManagedVirtualNetworkReference",
+					"referenceName": "default"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/tripFaresDataTransformations')]",
 			"type": "Microsoft.Synapse/workspaces/dataflows",
 			"apiVersion": "2019-06-01-preview",
@@ -1325,7 +1639,7 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/Data Exploration and ML Modeling - NYC taxi predict using Spark MLlib')]",
+			"name": "[concat(parameters('workspaceName'), '/AutoML_from_notebook')]",
 			"type": "Microsoft.Synapse/workspaces/notebooks",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
@@ -1345,7 +1659,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "54c93c9f-53d9-4423-b22c-c638425fbec0"
+						"spark.autotune.trackingId": "3df1fd21-977e-48d9-bd69-f7f9398309f2"
 					}
 				},
 				"metadata": {
@@ -1370,15 +1684,231 @@
 						"sparkVersion": "2.4",
 						"nodeCount": 5,
 						"cores": 4,
-						"memory": 28,
-						"automaticScaleJobs": false
+						"memory": 28
+					}
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"import azureml.core\n",
+							"\n",
+							"from azureml.core import Experiment, Workspace, Dataset, Datastore\n",
+							"from azureml.train.automl import AutoMLConfig\n",
+							"from notebookutils import mssparkutils\n",
+							"from azureml.data.dataset_factory import TabularDatasetFactory"
+						],
+						"outputs": [],
+						"execution_count": 5
 					},
-					"sessionKeepAliveTimeout": 30
+					{
+						"cell_type": "code",
+						"source": [
+							"linkedService_name = \"AzureMLService_stable_demo\"\n",
+							"experiment_name = \"synapse_automl_from_notebook\"\n",
+							"\n",
+							"ws = mssparkutils.azureML.getWorkspace(linkedService_name)\n",
+							"experiment = Experiment(ws, experiment_name)"
+						],
+						"outputs": [],
+						"execution_count": 6
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"df = spark.sql(\"SELECT * FROM stable_spark.for_automl__parquet\")\n",
+							"\n",
+							"datastore = Datastore.get_default(ws)\n",
+							"dataset = TabularDatasetFactory.register_spark_dataframe(df, datastore, name = experiment_name + \"-dataset\")"
+						],
+						"outputs": [],
+						"execution_count": 7
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"automl_config = AutoMLConfig(spark_context = sc,\n",
+							"                             task = \"classification\",\n",
+							"                             training_data = dataset,\n",
+							"                             label_column_name = \"tipped\",\n",
+							"                             primary_metric = \"accuracy\",\n",
+							"                             experiment_timeout_hours = 0.5,\n",
+							"                             max_concurrent_iterations = 2,\n",
+							"                             enable_onnx_compatible_models = True)"
+						],
+						"outputs": [],
+						"execution_count": 8
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"run = experiment.submit(automl_config)"
+						],
+						"outputs": [],
+						"execution_count": 9
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"displayHTML(\"<a href={} target='_blank'>Your experiment in Azure Machine Learning portal: {}</a>\".format(run.get_portal_url(), run.id))"
+						],
+						"outputs": [],
+						"execution_count": 10
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"run.wait_for_completion()"
+						],
+						"outputs": [],
+						"execution_count": 12
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"import onnxruntime\n",
+							"import mlflow\n",
+							"import mlflow.onnx\n",
+							"\n",
+							"from mlflow.models.signature import ModelSignature\n",
+							"from mlflow.types import DataType\n",
+							"from mlflow.types.schema import ColSpec, Schema\n",
+							"\n",
+							"# Get best model from automl run\n",
+							"best_run, onnx_model = run.get_output(return_onnx_model=True)\n",
+							"\n",
+							"# Define utility functions to infer the schema of ONNX model\n",
+							"def _infer_schema(data):\n",
+							"    res = []\n",
+							"    for _, col in enumerate(data):\n",
+							"        t = col.type.replace(\"tensor(\", \"\").replace(\")\", \"\")\n",
+							"        if t in [\"bool\"]:\n",
+							"            dt = DataType.boolean\n",
+							"        elif t in [\"int8\", \"uint8\", \"int16\", \"uint16\", \"int32\"]:\n",
+							"            dt = DateType.integer\n",
+							"        elif t in [\"uint32\", \"int64\"]:\n",
+							"            dt = DataType.long\n",
+							"        elif t in [\"float16\", \"bfloat16\", \"float\"]:\n",
+							"            dt = DataType.float\n",
+							"        elif t in [\"double\"]:\n",
+							"            dt = DataType.double\n",
+							"        elif t in [\"string\"]:\n",
+							"            dt = DataType.string\n",
+							"        else:\n",
+							"            raise Exception(\"Unsupported type: \" + t)\n",
+							"        res.append(ColSpec(type=dt, name=col.name))\n",
+							"    return Schema(res)\n",
+							"\n",
+							"def _infer_signature(onnx_model):\n",
+							"    onnx_model_bytes = onnx_model.SerializeToString()\n",
+							"    onnx_runtime = onnxruntime.InferenceSession(onnx_model_bytes)\n",
+							"    inputs = _infer_schema(onnx_runtime.get_inputs())\n",
+							"    outputs = _infer_schema(onnx_runtime.get_outputs())\n",
+							"    return ModelSignature(inputs, outputs)\n",
+							"\n",
+							"# Infer signature of ONNX model\n",
+							"signature = _infer_signature(onnx_model)\n",
+							"\n",
+							"artifact_path = experiment_name + \"_artifact\"\n",
+							"mlflow.set_tracking_uri(ws.get_mlflow_tracking_uri())\n",
+							"mlflow.set_experiment(experiment_name)\n",
+							"\n",
+							"with mlflow.start_run() as run:\n",
+							"    # Save the model to the outputs directory for capture\n",
+							"    mlflow.onnx.log_model(onnx_model, artifact_path, signature=signature)\n",
+							"\n",
+							"    # Register the model to AML model registry\n",
+							"    mlflow.register_model(\"runs:/\" + run.info.run_id + \"/\" + artifact_path, \"potqv37ta3p6tmagpocws1-for_automl__parquet-20211020014306-Best\")"
+						],
+						"outputs": [],
+						"execution_count": 13
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Data Exploration and ML Modeling - NYC taxi predict using Spark MLlib')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "ws1sparkpool1",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "9a98142e-de7c-48f5-8719-3df86613ee41"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/d87daa87-2363-41a9-8ea8-3a009c8b8fe2/resourceGroups/stable-synapse-poc/providers/Microsoft.Synapse/workspaces/potqv37ta3p6tmagpocws1/bigDataPools/ws1sparkpool1",
+						"name": "ws1sparkpool1",
+						"type": "Spark",
+						"endpoint": "https://potqv37ta3p6tmagpocws1.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/ws1sparkpool1",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "2.4",
+						"nodeCount": 5,
+						"cores": 4,
+						"memory": 28
+					}
 				},
 				"cells": [
 					{
 						"cell_type": "markdown",
-						"metadata": {},
 						"source": [
 							"# Predict NYC Taxi Tips using Spark ML and Azure Open Datasets\n",
 							"\n",
@@ -1391,7 +1921,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"import matplotlib.pyplot as plt\n",
 							"\n",
@@ -1414,7 +1943,6 @@
 					},
 					{
 						"cell_type": "markdown",
-						"metadata": {},
 						"source": [
 							"## Ingest Data¶ \n",
 							"\n",
@@ -1423,7 +1951,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"# Import NYC yellow cab data from Azure Open Datasets\n",
 							"from azureml.opendatasets import NycTlcYellow\n",
@@ -1442,7 +1969,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"#To make development easier, faster and less expensive downsample for now\n",
 							"sampled_taxi_df = nyc_tlc_df.sample(True, 0.001, seed=1234)"
@@ -1452,7 +1978,6 @@
 					},
 					{
 						"cell_type": "markdown",
-						"metadata": {},
 						"source": [
 							"## Exploratory Data Analysis\n",
 							"\n",
@@ -1461,7 +1986,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"#The charting package needs a Pandas dataframe or numpy array do the conversion\n",
 							"sampled_taxi_pd_df = sampled_taxi_df.toPandas()\n",
@@ -1496,7 +2020,6 @@
 					},
 					{
 						"cell_type": "markdown",
-						"metadata": {},
 						"source": [
 							"## Data Prep and Featurization\n",
 							"\n",
@@ -1508,7 +2031,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"taxi_df = sampled_taxi_df.select('totalAmount', 'fareAmount', 'tipAmount', 'paymentType', 'rateCodeId', 'passengerCount'\\\n",
 							"                                , 'tripDistance', 'tpepPickupDateTime', 'tpepDropoffDateTime'\\\n",
@@ -1531,7 +2053,6 @@
 					},
 					{
 						"cell_type": "markdown",
-						"metadata": {},
 						"source": [
 							"## Data Prep and Featurization Part 2\n",
 							"\n",
@@ -1543,7 +2064,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"taxi_featurised_df = taxi_df.select('totalAmount', 'fareAmount', 'tipAmount', 'paymentType', 'passengerCount'\\\n",
 							"                                                , 'tripDistance', 'weekdayString', 'pickupHour','tripTimeSecs','tipped'\\\n",
@@ -1560,7 +2080,6 @@
 					},
 					{
 						"cell_type": "markdown",
-						"metadata": {},
 						"source": [
 							"## Encoding\n",
 							"\n",
@@ -1574,7 +2093,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"# The sample uses an algorithm that only works with numeric features convert them so they can be consumed\n",
 							"sI1 = StringIndexer(inputCol=\"trafficTimeBins\", outputCol=\"trafficTimeBinsIndex\"); \n",
@@ -1590,7 +2108,6 @@
 					},
 					{
 						"cell_type": "markdown",
-						"metadata": {},
 						"source": [
 							"## Generation of Testing and Training Data Sets\n",
 							"Simple split, 70% for training and 30% for testing the model. Playing with this ratio may result in different models.\n",
@@ -1599,7 +2116,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"# Decide on the split between training and testing data from the dataframe \n",
 							"trainingFraction = 0.7\n",
@@ -1614,7 +2130,6 @@
 					},
 					{
 						"cell_type": "markdown",
-						"metadata": {},
 						"source": [
 							"## Train the Model\n",
 							"\n",
@@ -1623,7 +2138,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"## Create a new LR object for the model\n",
 							"logReg = LogisticRegression(maxIter=10, regParam=0.3, labelCol = 'tipped')\n",
@@ -1648,11 +2162,10 @@
 							"print(\"Area under ROC = %s\" % metrics.areaUnderROC)"
 						],
 						"outputs": [],
-						"execution_count": 15
+						"execution_count": 9
 					},
 					{
 						"cell_type": "markdown",
-						"metadata": {},
 						"source": [
 							"## Evaluate and Visualize\n",
 							"\n",
@@ -1662,7 +2175,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"## Plot the ROC curve, no need for pandas as this uses the modelSummary object\n",
 							"modelSummary = lrModel.stages[-1].summary\n",
@@ -1675,7 +2187,7 @@
 							"plt.show()"
 						],
 						"outputs": [],
-						"execution_count": 17
+						"execution_count": 10
 					},
 					{
 						"cell_type": "markdown",
@@ -1702,16 +2214,35 @@
 								"transient": {
 									"deleting": false
 								}
+							}
+						},
+						"source": [
+							"# RH excluding 'weekdayVec' and 'trafficTimeBinsVec'\r\n",
+							"df = predictions.select('pickupHour', 'passengerCount', 'tripTimeSecs', 'tripDistance', 'fareAmount', 'paymentType', 'tipped', 'prediction')"
+						],
+						"outputs": [],
+						"execution_count": 38
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
 							},
 							"collapsed": false
 						},
 						"source": [
-							"df = predictions.select('tripDistance', 'tipped', 'prediction')\r\n",
 							"display(df.head(10))\r\n",
 							"# RH: todo report on predictions entire table"
 						],
 						"outputs": [],
-						"execution_count": 28
+						"execution_count": 32
 					},
 					{
 						"cell_type": "code",
@@ -1731,7 +2262,7 @@
 							"# spark.sql('CREATE DATABASE stable_spark')"
 						],
 						"outputs": [],
-						"execution_count": 22
+						"execution_count": 12
 					},
 					{
 						"cell_type": "code",
@@ -1790,7 +2321,7 @@
 							"    return (table_name, path)"
 						],
 						"outputs": [],
-						"execution_count": 26
+						"execution_count": 33
 					},
 					{
 						"cell_type": "code",
@@ -1809,7 +2340,7 @@
 							"create_spark_table(df, 'stable_spark.ml_predictions', 'parquet', None)"
 						],
 						"outputs": [],
-						"execution_count": 29
+						"execution_count": 41
 					},
 					{
 						"cell_type": "code",
@@ -1825,11 +2356,165 @@
 							}
 						},
 						"source": [
-							"cleanup_table('stable_spark.ml_predictions__parquet',\r\n",
-							" 'abfss://dlspotpocfs1@potqv37ta3p6tmagpoc.dfs.core.windows.net/synapse/spark/stable_spark.ml_predictions__parquet')"
+							"#cleanup_table('stable_spark.ml_predictions__parquet',\r\n",
+							"# 'abfss://dlspotpocfs1@potqv37ta3p6tmagpoc.dfs.core.windows.net/synapse/spark/stable_spark.ml_predictions__parquet')"
 						],
 						"outputs": [],
-						"execution_count": 30
+						"execution_count": 16
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Write prediction to DWH (dedicated SQL pool)\r\n",
+							"## by RH"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# df = predictions # RH todo entire table\r\n",
+							"df.registerTempTable('TmpDf')"
+						],
+						"outputs": [],
+						"execution_count": 39
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "scala"
+							}
+						},
+						"source": [
+							"%%spark\r\n",
+							"val scala_df = spark.table(\"TmpDf\")\r\n",
+							"scala_df.write.synapsesql(\"potqv37ta3p6tmagpocws1p1.dbo.ml_predictions__from_spark\", Constants.INTERNAL)"
+						],
+						"outputs": [],
+						"execution_count": 40
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Create a DL table without prediction for automl\r\n",
+							"## by RH"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# RH excluding 'weekdayVec' and 'trafficTimeBinsVec'\r\n",
+							"forautoml_df = predictions.select('pickupHour', 'passengerCount', 'tripTimeSecs', 'tripDistance', 'fareAmount', 'paymentType', 'tipped')"
+						],
+						"outputs": [],
+						"execution_count": 36
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"create_spark_table(forautoml_df, 'stable_spark.for_automl', 'parquet', None)"
+						],
+						"outputs": [],
+						"execution_count": 42
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"forautoml_df.registerTempTable('TmpDf')"
+						],
+						"outputs": [],
+						"execution_count": 43
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "scala"
+							}
+						},
+						"source": [
+							"%%spark\r\n",
+							"val scala_df = spark.table(\"TmpDf\")\r\n",
+							"scala_df.write.synapsesql(\"potqv37ta3p6tmagpocws1p1.dbo.unpredicted\", Constants.INTERNAL)"
+						],
+						"outputs": [],
+						"execution_count": 44
 					},
 					{
 						"cell_type": "code",
@@ -1948,6 +2633,112 @@
 						],
 						"outputs": [],
 						"execution_count": 3
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Spark_data_ingress_pipeline')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "ws1sparkpool1",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "f409e3d4-c05c-4906-93b0-caa4388774f4"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/d87daa87-2363-41a9-8ea8-3a009c8b8fe2/resourceGroups/stable-synapse-poc/providers/Microsoft.Synapse/workspaces/potqv37ta3p6tmagpocws1/bigDataPools/ws1sparkpool1",
+						"name": "ws1sparkpool1",
+						"type": "Spark",
+						"endpoint": "https://potqv37ta3p6tmagpocws1.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/ws1sparkpool1",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "2.4",
+						"nodeCount": 5,
+						"cores": 4,
+						"memory": 28
+					}
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {
+							"tags": [
+								"parameters"
+							]
+						},
+						"source": [
+							"year = 2021\r\n",
+							"month = 9"
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"mssparkutils.notebook.exit(\"ingress_success; \" + year + \"/\" + month)"
+						],
+						"outputs": [],
+						"execution_count": 3
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							""
+						],
+						"outputs": [],
+						"execution_count": null
 					}
 				]
 			},

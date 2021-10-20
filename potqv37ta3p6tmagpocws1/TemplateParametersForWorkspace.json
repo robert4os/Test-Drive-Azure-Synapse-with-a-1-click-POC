@@ -5,8 +5,23 @@
 		"workspaceName": {
 			"value": "potqv37ta3p6tmagpocws1"
 		},
+		"AzureMLService_stable_demo_servicePrincipalKey": {
+			"value": ""
+		},
 		"TripFaresSynapseAnalyticsLinkedService_connectionString": {
 			"value": ""
+		},
+		"AzureMLService_stable_demo_properties_typeProperties_subscriptionId": {
+			"value": "d87daa87-2363-41a9-8ea8-3a009c8b8fe2"
+		},
+		"AzureMLService_stable_demo_properties_typeProperties_resourceGroupName": {
+			"value": "stable-aml-demo"
+		},
+		"AzureMLService_stable_demo_properties_typeProperties_servicePrincipalId": {
+			"value": "3d346348-2e2e-47c7-a0a4-f8bb9daa1e61"
+		},
+		"AzureMLService_stable_demo_properties_typeProperties_tenant": {
+			"value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
 		},
 		"HttpServerTripDataLinkedService_properties_typeProperties_url": {
 			"value": "https://raw.githubusercontent.com/Azure/Test-Drive-Azure-Synapse-with-a-1-click-POC/main/tripDataAndFaresCSV/trip-data.csv"
