@@ -1,0 +1,219 @@
+{
+	"name": "TripFaresDataPipeline_Spark_Notebook",
+	"properties": {
+		"activities": [
+			{
+				"name": "IngestTripDataIntoADLS",
+				"description": "Copies the trip data csv file from the git repo and loads it into the ADLS.",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "HttpReadSettings",
+							"requestMethod": "GET"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "tripsDataSource",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "tripDataSink",
+						"type": "DatasetReference",
+						"parameters": {
+							"datalakeAccountName": {
+								"value": "@pipeline().parameters.datalakeAccountName",
+								"type": "Expression"
+							},
+							"keyVaultName": {
+								"value": "@pipeline().parameters.KeyVaultName",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "IngestTripFaresDataIntoADLS",
+				"description": "Copies the trip fare data csv file from the git repo and loads it into the ADLS.",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "HttpReadSettings",
+							"requestMethod": "GET"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "faresDataSource",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "faresDataSink",
+						"type": "DatasetReference",
+						"parameters": {
+							"keyVaultName": {
+								"value": "@pipeline().parameters.KeyVaultName",
+								"type": "Expression"
+							},
+							"datalakeAccountName": {
+								"value": "@pipeline().parameters.datalakeAccountName",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "SparkNotebook",
+				"type": "SynapseNotebook",
+				"dependsOn": [
+					{
+						"activity": "IngestTripDataIntoADLS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "IngestTripFaresDataIntoADLS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebook": {
+						"referenceName": "Spark_data_ingress_pipeline",
+						"type": "NotebookReference"
+					},
+					"parameters": {
+						"year": {
+							"value": "2010",
+							"type": "int"
+						},
+						"month": {
+							"value": "7",
+							"type": "int"
+						}
+					},
+					"snapshot": true
+				}
+			},
+			{
+				"name": "Admin Alert",
+				"type": "WebHook",
+				"dependsOn": [
+					{
+						"activity": "SparkNotebook",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-237.westeurope.logic.azure.com:443/workflows/017625c052794700811ff60a7d99750d/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=esDe5zfG3Ph4vd8wt-5D-hUlzCze4rEdSjCsktCBrG8",
+					"method": "POST",
+					"body": "spark notebook exit",
+					"timeout": "00:10:00"
+				}
+			}
+		],
+		"parameters": {
+			"SynapseWorkspaceName": {
+				"type": "string",
+				"defaultValue": "potqv37ta3p6tmagpocws1.database.windows.net"
+			},
+			"datalakeAccountName": {
+				"type": "string",
+				"defaultValue": "potqv37ta3p6tmagpoc"
+			}
+		},
+		"folder": {
+			"name": "TripFaresDataPipeline"
+		},
+		"annotations": []
+	}
+}

@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "6eebea4c-48c4-457a-b5e4-6598e83ce955"
+				"spark.autotune.trackingId": "9a98142e-de7c-48f5-8719-3df86613ee41"
 			}
 		},
 		"metadata": {
@@ -294,7 +294,7 @@
 					"metrics = BinaryClassificationMetrics(predictionAndLabels)\n",
 					"print(\"Area under ROC = %s\" % metrics.areaUnderROC)"
 				],
-				"execution_count": 15
+				"execution_count": 9
 			},
 			{
 				"cell_type": "markdown",
@@ -318,7 +318,7 @@
 					"plt.ylabel('True Positive Rate')\n",
 					"plt.show()"
 				],
-				"execution_count": 17
+				"execution_count": 10
 			},
 			{
 				"cell_type": "markdown",
@@ -345,15 +345,33 @@
 						"transient": {
 							"deleting": false
 						}
+					}
+				},
+				"source": [
+					"# RH excluding 'weekdayVec' and 'trafficTimeBinsVec'\r\n",
+					"df = predictions.select('pickupHour', 'passengerCount', 'tripTimeSecs', 'tripDistance', 'fareAmount', 'paymentType', 'tipped', 'prediction')"
+				],
+				"execution_count": 38
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
 					},
 					"collapsed": false
 				},
 				"source": [
-					"df = predictions.select('tripDistance', 'tipped', 'prediction')\r\n",
 					"display(df.head(10))\r\n",
 					"# RH: todo report on predictions entire table"
 				],
-				"execution_count": 28
+				"execution_count": 32
 			},
 			{
 				"cell_type": "code",
@@ -372,7 +390,7 @@
 					"# do only once\r\n",
 					"# spark.sql('CREATE DATABASE stable_spark')"
 				],
-				"execution_count": 22
+				"execution_count": 12
 			},
 			{
 				"cell_type": "code",
@@ -430,7 +448,7 @@
 					"\r\n",
 					"    return (table_name, path)"
 				],
-				"execution_count": 26
+				"execution_count": 33
 			},
 			{
 				"cell_type": "code",
@@ -448,7 +466,7 @@
 				"source": [
 					"create_spark_table(df, 'stable_spark.ml_predictions', 'parquet', None)"
 				],
-				"execution_count": 29
+				"execution_count": 41
 			},
 			{
 				"cell_type": "code",
@@ -464,10 +482,158 @@
 					}
 				},
 				"source": [
-					"cleanup_table('stable_spark.ml_predictions__parquet',\r\n",
-					" 'abfss://dlspotpocfs1@potqv37ta3p6tmagpoc.dfs.core.windows.net/synapse/spark/stable_spark.ml_predictions__parquet')"
+					"#cleanup_table('stable_spark.ml_predictions__parquet',\r\n",
+					"# 'abfss://dlspotpocfs1@potqv37ta3p6tmagpoc.dfs.core.windows.net/synapse/spark/stable_spark.ml_predictions__parquet')"
 				],
-				"execution_count": 30
+				"execution_count": 16
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# Write prediction to DWH (dedicated SQL pool)\r\n",
+					"## by RH"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# df = predictions # RH todo entire table\r\n",
+					"df.registerTempTable('TmpDf')"
+				],
+				"execution_count": 39
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "scala"
+					}
+				},
+				"source": [
+					"%%spark\r\n",
+					"val scala_df = spark.table(\"TmpDf\")\r\n",
+					"scala_df.write.synapsesql(\"potqv37ta3p6tmagpocws1p1.dbo.ml_predictions__from_spark\", Constants.INTERNAL)"
+				],
+				"execution_count": 40
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# Create a DL table without prediction for automl\r\n",
+					"## by RH"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# RH excluding 'weekdayVec' and 'trafficTimeBinsVec'\r\n",
+					"forautoml_df = predictions.select('pickupHour', 'passengerCount', 'tripTimeSecs', 'tripDistance', 'fareAmount', 'paymentType', 'tipped')"
+				],
+				"execution_count": 36
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"create_spark_table(forautoml_df, 'stable_spark.for_automl', 'parquet', None)"
+				],
+				"execution_count": 42
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"forautoml_df.registerTempTable('TmpDf')"
+				],
+				"execution_count": 43
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "scala"
+					}
+				},
+				"source": [
+					"%%spark\r\n",
+					"val scala_df = spark.table(\"TmpDf\")\r\n",
+					"scala_df.write.synapsesql(\"potqv37ta3p6tmagpocws1p1.dbo.unpredicted\", Constants.INTERNAL)"
+				],
+				"execution_count": 44
 			},
 			{
 				"cell_type": "code",
