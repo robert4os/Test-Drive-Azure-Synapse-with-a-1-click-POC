@@ -196,7 +196,9 @@
 				"typeProperties": {
 					"url": "https://prod-237.westeurope.logic.azure.com:443/workflows/017625c052794700811ff60a7d99750d/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=esDe5zfG3Ph4vd8wt-5D-hUlzCze4rEdSjCsktCBrG8",
 					"method": "POST",
-					"body": "spark notebook exit",
+					"body": {
+						"body": "spark notebook exit"
+					},
 					"timeout": "00:10:00"
 				}
 			}
@@ -209,6 +211,10 @@
 			"datalakeAccountName": {
 				"type": "string",
 				"defaultValue": "potqv37ta3p6tmagpoc"
+			},
+			"KeyVaultName": {
+				"type": "string",
+				"defaultValue": "kvpotqv37ta3p6tmagpoc"
 			}
 		},
 		"folder": {
