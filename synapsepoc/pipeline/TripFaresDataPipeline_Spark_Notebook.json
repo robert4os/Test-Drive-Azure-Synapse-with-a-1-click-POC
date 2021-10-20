@@ -171,11 +171,11 @@
 					"parameters": {
 						"year": {
 							"value": "2010",
-							"type": "string"
+							"type": "int"
 						},
 						"month": {
 							"value": "7",
-							"type": "string"
+							"type": "int"
 						}
 					},
 					"snapshot": true
@@ -197,8 +197,8 @@
 					"url": "https://prod-237.westeurope.logic.azure.com:443/workflows/017625c052794700811ff60a7d99750d/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=esDe5zfG3Ph4vd8wt-5D-hUlzCze4rEdSjCsktCBrG8",
 					"method": "POST",
 					"body": {
-						"topic": "spark notebook exit",
-						"result": "ok"
+						"value": "@json('{\"topic\": \"result\", \"data\":\"{@activity(\"SparkNotebook\").output.status.Output.result.exitValue}\"}')\n\n",
+						"type": "Expression"
 					},
 					"timeout": "00:10:00"
 				}
