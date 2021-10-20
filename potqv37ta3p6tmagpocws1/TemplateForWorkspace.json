@@ -33,6 +33,15 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('workspaceName'), '/advw_dwh100')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/TripFaresDataPipeline')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
 			"apiVersion": "2019-06-01-preview",
@@ -1094,7 +1103,7 @@
 				"annotations": [],
 				"type": "PowerBIWorkspace",
 				"typeProperties": {
-					"workspaceID": "",
+					"workspaceID": "81a8ebb9-22b2-492d-bcfc-89de35fe3d05",
 					"tenantID": "72f988bf-86f1-41af-91ab-2d7cd011db47"
 				}
 			},
@@ -1336,7 +1345,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "a3542c41-16bf-48e1-810b-b5aac9dcdeeb"
+						"spark.autotune.trackingId": "54c93c9f-53d9-4423-b22c-c638425fbec0"
 					}
 				},
 				"metadata": {
@@ -1361,12 +1370,15 @@
 						"sparkVersion": "2.4",
 						"nodeCount": 5,
 						"cores": 4,
-						"memory": 28
-					}
+						"memory": 28,
+						"automaticScaleJobs": false
+					},
+					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"# Predict NYC Taxi Tips using Spark ML and Azure Open Datasets\n",
 							"\n",
@@ -1379,6 +1391,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"import matplotlib.pyplot as plt\n",
 							"\n",
@@ -1401,6 +1414,7 @@
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Ingest Data¶ \n",
 							"\n",
@@ -1409,6 +1423,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"# Import NYC yellow cab data from Azure Open Datasets\n",
 							"from azureml.opendatasets import NycTlcYellow\n",
@@ -1423,19 +1438,21 @@
 							"nyc_tlc_df = nyc_tlc.to_spark_dataframe()"
 						],
 						"outputs": [],
-						"execution_count": 6
+						"execution_count": 2
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"#To make development easier, faster and less expensive downsample for now\n",
 							"sampled_taxi_df = nyc_tlc_df.sample(True, 0.001, seed=1234)"
 						],
 						"outputs": [],
-						"execution_count": 7
+						"execution_count": 3
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Exploratory Data Analysis\n",
 							"\n",
@@ -1444,6 +1461,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"#The charting package needs a Pandas dataframe or numpy array do the conversion\n",
 							"sampled_taxi_pd_df = sampled_taxi_df.toPandas()\n",
@@ -1474,10 +1492,11 @@
 							"plt.show()"
 						],
 						"outputs": [],
-						"execution_count": 8
+						"execution_count": 4
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Data Prep and Featurization\n",
 							"\n",
@@ -1489,6 +1508,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"taxi_df = sampled_taxi_df.select('totalAmount', 'fareAmount', 'tipAmount', 'paymentType', 'rateCodeId', 'passengerCount'\\\n",
 							"                                , 'tripDistance', 'tpepPickupDateTime', 'tpepDropoffDateTime'\\\n",
@@ -1507,10 +1527,11 @@
 							"                                )"
 						],
 						"outputs": [],
-						"execution_count": 9
+						"execution_count": 5
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Data Prep and Featurization Part 2\n",
 							"\n",
@@ -1522,6 +1543,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"taxi_featurised_df = taxi_df.select('totalAmount', 'fareAmount', 'tipAmount', 'paymentType', 'passengerCount'\\\n",
 							"                                                , 'tripDistance', 'weekdayString', 'pickupHour','tripTimeSecs','tipped'\\\n",
@@ -1534,10 +1556,11 @@
 							"                                       .filter((taxi_df.tripTimeSecs >= 30) & (taxi_df.tripTimeSecs <= 7200))"
 						],
 						"outputs": [],
-						"execution_count": 10
+						"execution_count": 6
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Encoding\n",
 							"\n",
@@ -1551,6 +1574,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"# The sample uses an algorithm that only works with numeric features convert them so they can be consumed\n",
 							"sI1 = StringIndexer(inputCol=\"trafficTimeBins\", outputCol=\"trafficTimeBinsIndex\"); \n",
@@ -1562,10 +1586,11 @@
 							"encoded_final_df = Pipeline(stages=[sI1, en1, sI2, en2]).fit(taxi_featurised_df).transform(taxi_featurised_df)"
 						],
 						"outputs": [],
-						"execution_count": 11
+						"execution_count": 7
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Generation of Testing and Training Data Sets\n",
 							"Simple split, 70% for training and 30% for testing the model. Playing with this ratio may result in different models.\n",
@@ -1574,6 +1599,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"# Decide on the split between training and testing data from the dataframe \n",
 							"trainingFraction = 0.7\n",
@@ -1584,10 +1610,11 @@
 							"train_data_df, test_data_df = encoded_final_df.randomSplit([trainingFraction, testingFraction], seed=seed)"
 						],
 						"outputs": [],
-						"execution_count": 12
+						"execution_count": 8
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Train the Model\n",
 							"\n",
@@ -1596,6 +1623,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"## Create a new LR object for the model\n",
 							"logReg = LogisticRegression(maxIter=10, regParam=0.3, labelCol = 'tipped')\n",
@@ -1614,15 +1642,17 @@
 							"\n",
 							"## Predict tip 1/0 (yes/no) on the test dataset, evaluation using AUROC\n",
 							"predictions = lrModel.transform(test_data_df)\n",
-							"predictionAndLabels = predictions.select(\"label\",\"prediction\").rdd\n",
+							"predictionAndLabelsDF = predictions.select(\"label\",\"prediction\")\n",
+							"predictionAndLabels = predictionAndLabelsDF.rdd\n",
 							"metrics = BinaryClassificationMetrics(predictionAndLabels)\n",
 							"print(\"Area under ROC = %s\" % metrics.areaUnderROC)"
 						],
 						"outputs": [],
-						"execution_count": 13
+						"execution_count": 15
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Evaluate and Visualize\n",
 							"\n",
@@ -1632,6 +1662,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"## Plot the ROC curve, no need for pandas as this uses the modelSummary object\n",
 							"modelSummary = lrModel.stages[-1].summary\n",
@@ -1644,7 +1675,161 @@
 							"plt.show()"
 						],
 						"outputs": [],
-						"execution_count": 14
+						"execution_count": 17
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Share Result as Spark Table\r\n",
+							"## by RH"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"df = predictions.select('tripDistance', 'tipped', 'prediction')\r\n",
+							"display(df.head(10))\r\n",
+							"# RH: todo report on predictions entire table"
+						],
+						"outputs": [],
+						"execution_count": 28
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# do only once\r\n",
+							"# spark.sql('CREATE DATABASE stable_spark')"
+						],
+						"outputs": [],
+						"execution_count": 22
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"data_lake_test_path = 'abfss://dlspotpocfs1@potqv37ta3p6tmagpoc.dfs.core.windows.net/synapse/spark/'\r\n",
+							"\r\n",
+							"def cleanup_table(table_name, path):\r\n",
+							"    # cleanup \r\n",
+							"    try:\r\n",
+							"        print('Drop table ' + table_name)\r\n",
+							"        spark.sql('DROP TABLE IF EXISTS ' + table_name)\r\n",
+							"    except: pass\r\n",
+							"\r\n",
+							"    try:\r\n",
+							"        print('Delete file path ' + path)\r\n",
+							"        from notebookutils import mssparkutils\r\n",
+							"        mssparkutils.fs.rm(path, recurse=True)\r\n",
+							"    except: pass\r\n",
+							"\r\n",
+							"def create_spark_table(df, name, fmt, partition_by):\r\n",
+							"    table_name = name + ('__' + fmt if fmt is not None else '') + ('__part_' + partition_by if partition_by is not None else '')\r\n",
+							"    path = data_lake_test_path + table_name\r\n",
+							"\r\n",
+							"    cleanup_table(table_name, path)\r\n",
+							"\r\n",
+							"    # write data\r\n",
+							"    print('Write file path ' + path)\r\n",
+							"    _tmp = df.write\r\n",
+							"    if fmt is not None:\r\n",
+							"        _tmp = _tmp.format(fmt)\r\n",
+							"    if partition_by is not None:\r\n",
+							"        _tmp = _tmp.partitionBy(partition_by)\r\n",
+							"    _tmp.save(path)    \r\n",
+							" \r\n",
+							"    # Load the data from its source.\r\n",
+							"    _tmp = spark.read\r\n",
+							"    if fmt is not None:\r\n",
+							"        _tmp = _tmp.format(fmt)\r\n",
+							"    df = _tmp.load(path)\r\n",
+							" \r\n",
+							"    # Create the table.\r\n",
+							"    print('Create table ' + table_name)\r\n",
+							"    spark.sql(\"CREATE TABLE \" + table_name + (\" USING \" + fmt if fmt is not None else \"\") + \" LOCATION '\" + path + \"'\")\r\n",
+							"\r\n",
+							"    return (table_name, path)"
+						],
+						"outputs": [],
+						"execution_count": 26
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"create_spark_table(df, 'stable_spark.ml_predictions', 'parquet', None)"
+						],
+						"outputs": [],
+						"execution_count": 29
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"cleanup_table('stable_spark.ml_predictions__parquet',\r\n",
+							" 'abfss://dlspotpocfs1@potqv37ta3p6tmagpoc.dfs.core.windows.net/synapse/spark/stable_spark.ml_predictions__parquet')"
+						],
+						"outputs": [],
+						"execution_count": 30
 					},
 					{
 						"cell_type": "code",
@@ -1767,6 +1952,19 @@
 				]
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/advw_dwh100')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"restorePointInTime": "0001-01-01T00:00:00",
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "westeurope"
 		},
 		{
 			"name": "[concat(parameters('workspaceName'), '/potqv37ta3p6tmagpocws1p1')]",
