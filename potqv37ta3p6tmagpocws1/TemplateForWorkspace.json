@@ -753,11 +753,11 @@
 							"parameters": {
 								"year": {
 									"value": "2010",
-									"type": "string"
+									"type": "int"
 								},
 								"month": {
 									"value": "7",
-									"type": "string"
+									"type": "int"
 								}
 							},
 							"snapshot": true
@@ -780,8 +780,8 @@
 							"method": "POST",
 							"headers": {},
 							"body": {
-								"topic": "spark notebook exit",
-								"result": "ok"
+								"value": "@json('{\"topic\": \"result\", \"data\":\"{@activity(\"SparkNotebook\").output.status.Output.result.exitValue}\"}')\n\n",
+								"type": "Expression"
 							},
 							"timeout": "00:10:00"
 						}
@@ -2660,7 +2660,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "f409e3d4-c05c-4906-93b0-caa4388774f4"
+						"spark.autotune.trackingId": "7120ecd0-3145-4ae4-a219-aa632c7e7e93"
 					}
 				},
 				"metadata": {
@@ -2685,8 +2685,10 @@
 						"sparkVersion": "2.4",
 						"nodeCount": 5,
 						"cores": 4,
-						"memory": 28
-					}
+						"memory": 28,
+						"automaticScaleJobs": false
+					},
+					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
@@ -2699,25 +2701,6 @@
 						"source": [
 							"year = 2021\r\n",
 							"month = 9"
-						],
-						"outputs": [],
-						"execution_count": 2
-					},
-					{
-						"cell_type": "code",
-						"metadata": {
-							"jupyter": {
-								"source_hidden": false,
-								"outputs_hidden": false
-							},
-							"nteract": {
-								"transient": {
-									"deleting": false
-								}
-							}
-						},
-						"source": [
-							"mssparkutils.notebook.exit(\"ingress_success; \" + year + \"/\" + month)"
 						],
 						"outputs": [],
 						"execution_count": 3
@@ -2736,10 +2719,10 @@
 							}
 						},
 						"source": [
-							""
+							"mssparkutils.notebook.exit(\"ingress_success; \" + str(year) + \"/\" + str(month))"
 						],
 						"outputs": [],
-						"execution_count": null
+						"execution_count": 5
 					}
 				]
 			},
