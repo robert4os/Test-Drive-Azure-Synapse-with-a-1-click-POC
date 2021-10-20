@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "a3542c41-16bf-48e1-810b-b5aac9dcdeeb"
+				"spark.autotune.trackingId": "6eebea4c-48c4-457a-b5e4-6598e83ce955"
 			}
 		},
 		"metadata": {
@@ -104,7 +104,7 @@
 					"nyc_tlc = NycTlcYellow(start_date=start_date, end_date=end_date)\n",
 					"nyc_tlc_df = nyc_tlc.to_spark_dataframe()"
 				],
-				"execution_count": 6
+				"execution_count": 2
 			},
 			{
 				"cell_type": "code",
@@ -112,7 +112,7 @@
 					"#To make development easier, faster and less expensive downsample for now\n",
 					"sampled_taxi_df = nyc_tlc_df.sample(True, 0.001, seed=1234)"
 				],
-				"execution_count": 7
+				"execution_count": 3
 			},
 			{
 				"cell_type": "markdown",
@@ -153,7 +153,7 @@
 					"plt.suptitle('')\n",
 					"plt.show()"
 				],
-				"execution_count": 8
+				"execution_count": 4
 			},
 			{
 				"cell_type": "markdown",
@@ -185,7 +185,7 @@
 					"                                & (sampled_taxi_df.paymentType.isin({\"1\", \"2\"}))\n",
 					"                                )"
 				],
-				"execution_count": 9
+				"execution_count": 5
 			},
 			{
 				"cell_type": "markdown",
@@ -211,7 +211,7 @@
 					"                                              )\\\n",
 					"                                       .filter((taxi_df.tripTimeSecs >= 30) & (taxi_df.tripTimeSecs <= 7200))"
 				],
-				"execution_count": 10
+				"execution_count": 6
 			},
 			{
 				"cell_type": "markdown",
@@ -238,7 +238,7 @@
 					"# Create a new dataframe that has had the encodings applied\n",
 					"encoded_final_df = Pipeline(stages=[sI1, en1, sI2, en2]).fit(taxi_featurised_df).transform(taxi_featurised_df)"
 				],
-				"execution_count": 11
+				"execution_count": 7
 			},
 			{
 				"cell_type": "markdown",
@@ -259,7 +259,7 @@
 					"# Split the dataframe into test and training dataframes\n",
 					"train_data_df, test_data_df = encoded_final_df.randomSplit([trainingFraction, testingFraction], seed=seed)"
 				],
-				"execution_count": 12
+				"execution_count": 8
 			},
 			{
 				"cell_type": "markdown",
@@ -289,11 +289,12 @@
 					"\n",
 					"## Predict tip 1/0 (yes/no) on the test dataset, evaluation using AUROC\n",
 					"predictions = lrModel.transform(test_data_df)\n",
-					"predictionAndLabels = predictions.select(\"label\",\"prediction\").rdd\n",
+					"predictionAndLabelsDF = predictions.select(\"label\",\"prediction\")\n",
+					"predictionAndLabels = predictionAndLabelsDF.rdd\n",
 					"metrics = BinaryClassificationMetrics(predictionAndLabels)\n",
 					"print(\"Area under ROC = %s\" % metrics.areaUnderROC)"
 				],
-				"execution_count": 13
+				"execution_count": 15
 			},
 			{
 				"cell_type": "markdown",
@@ -317,7 +318,156 @@
 					"plt.ylabel('True Positive Rate')\n",
 					"plt.show()"
 				],
-				"execution_count": 14
+				"execution_count": 17
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# Share Result as Spark Table\r\n",
+					"## by RH"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"df = predictions.select('tripDistance', 'tipped', 'prediction')\r\n",
+					"display(df.head(10))\r\n",
+					"# RH: todo report on predictions entire table"
+				],
+				"execution_count": 28
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# do only once\r\n",
+					"# spark.sql('CREATE DATABASE stable_spark')"
+				],
+				"execution_count": 22
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"data_lake_test_path = 'abfss://dlspotpocfs1@potqv37ta3p6tmagpoc.dfs.core.windows.net/synapse/spark/'\r\n",
+					"\r\n",
+					"def cleanup_table(table_name, path):\r\n",
+					"    # cleanup \r\n",
+					"    try:\r\n",
+					"        print('Drop table ' + table_name)\r\n",
+					"        spark.sql('DROP TABLE IF EXISTS ' + table_name)\r\n",
+					"    except: pass\r\n",
+					"\r\n",
+					"    try:\r\n",
+					"        print('Delete file path ' + path)\r\n",
+					"        from notebookutils import mssparkutils\r\n",
+					"        mssparkutils.fs.rm(path, recurse=True)\r\n",
+					"    except: pass\r\n",
+					"\r\n",
+					"def create_spark_table(df, name, fmt, partition_by):\r\n",
+					"    table_name = name + ('__' + fmt if fmt is not None else '') + ('__part_' + partition_by if partition_by is not None else '')\r\n",
+					"    path = data_lake_test_path + table_name\r\n",
+					"\r\n",
+					"    cleanup_table(table_name, path)\r\n",
+					"\r\n",
+					"    # write data\r\n",
+					"    print('Write file path ' + path)\r\n",
+					"    _tmp = df.write\r\n",
+					"    if fmt is not None:\r\n",
+					"        _tmp = _tmp.format(fmt)\r\n",
+					"    if partition_by is not None:\r\n",
+					"        _tmp = _tmp.partitionBy(partition_by)\r\n",
+					"    _tmp.save(path)    \r\n",
+					" \r\n",
+					"    # Load the data from its source.\r\n",
+					"    _tmp = spark.read\r\n",
+					"    if fmt is not None:\r\n",
+					"        _tmp = _tmp.format(fmt)\r\n",
+					"    df = _tmp.load(path)\r\n",
+					" \r\n",
+					"    # Create the table.\r\n",
+					"    print('Create table ' + table_name)\r\n",
+					"    spark.sql(\"CREATE TABLE \" + table_name + (\" USING \" + fmt if fmt is not None else \"\") + \" LOCATION '\" + path + \"'\")\r\n",
+					"\r\n",
+					"    return (table_name, path)"
+				],
+				"execution_count": 26
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"create_spark_table(df, 'stable_spark.ml_predictions', 'parquet', None)"
+				],
+				"execution_count": 29
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"cleanup_table('stable_spark.ml_predictions__parquet',\r\n",
+					" 'abfss://dlspotpocfs1@potqv37ta3p6tmagpoc.dfs.core.windows.net/synapse/spark/stable_spark.ml_predictions__parquet')"
+				],
+				"execution_count": 30
 			},
 			{
 				"cell_type": "code",
