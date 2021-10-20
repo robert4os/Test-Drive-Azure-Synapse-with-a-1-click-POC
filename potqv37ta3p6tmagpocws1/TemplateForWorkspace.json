@@ -780,8 +780,7 @@
 							"method": "POST",
 							"headers": {},
 							"body": {
-								"value": "@json('{\"topic\": \"result\", \"data\":\"{@activity(\"SparkNotebook\").output.status.Output.result.exitValue}\"}')\n\n",
-								"type": "Expression"
+								"some": "body"
 							},
 							"timeout": "00:10:00"
 						}
@@ -2660,7 +2659,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "7120ecd0-3145-4ae4-a219-aa632c7e7e93"
+						"spark.autotune.trackingId": "7236a208-2d56-4b68-a1e3-b1facf8d480c"
 					}
 				},
 				"metadata": {
@@ -2685,10 +2684,8 @@
 						"sparkVersion": "2.4",
 						"nodeCount": 5,
 						"cores": 4,
-						"memory": 28,
-						"automaticScaleJobs": false
-					},
-					"sessionKeepAliveTimeout": 30
+						"memory": 28
+					}
 				},
 				"cells": [
 					{
