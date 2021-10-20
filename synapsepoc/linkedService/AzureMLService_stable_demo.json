@@ -10,10 +10,10 @@
 			"mlWorkspaceName": "stable-aml-demo",
 			"servicePrincipalId": "3d346348-2e2e-47c7-a0a4-f8bb9daa1e61",
 			"tenant": "72f988bf-86f1-41af-91ab-2d7cd011db47",
-			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIlBPVFFWMzdUQTNQNlRNQUdQT0NXUzFfNzUxMWIwMzgtZWNiZi00YmE0LTg1NzYtMzkyYWE2MTQwNDlhIg0KfQ=="
+			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIlBPVFFWMzdUQTNQNlRNQUdQT0NXUzFfZjQ3NTFlM2QtMjBkZC00MzYxLThjZDMtMWQ0MGNmYjRiMzcyIg0KfQ=="
 		},
 		"connectVia": {
-			"referenceName": "AutoResolveIntegrationRuntime",
+			"referenceName": "IntegrationRuntime1",
 			"type": "IntegrationRuntimeReference"
 		}
 	}
