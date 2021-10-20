@@ -780,7 +780,8 @@
 							"method": "POST",
 							"headers": {},
 							"body": {
-								"body": "spark notebook exit"
+								"topic": "spark notebook exit",
+								"result": "ok"
 							},
 							"timeout": "00:10:00"
 						}
