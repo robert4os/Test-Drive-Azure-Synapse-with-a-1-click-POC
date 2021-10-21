@@ -1619,6 +1619,46 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/SQL_Define_ml_scoring_stored_proc')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "DROP PROCEDURE [dbo].[score_w_ml]; \nGO\n\nCREATE PROCEDURE [dbo].[score_w_ml]\nAS\nBEGIN\n\nSELECT\n    CAST([pickupHour] AS [varchar]) AS [pickupHour],\n    CAST([passengerCount] AS [bigint]) AS [passengerCount],\n    [tripTimeSecs],\n    CAST([tripDistance] AS [real]) AS [tripDistance],\n    CAST([fareAmount] AS [real]) AS [fareAmount],\n    CAST([paymentType] AS [varchar]) AS [paymentType]\n    --,CAST(0 AS [real]) AS [tipped]\nINTO [dbo].[#unpredicted]\nFROM [dbo].[unpredicted];\n\nSELECT * FROM PREDICT (MODEL = (SELECT [model] FROM dbo.ml_models WHERE [ID] = 'potqv37ta3p6tmagpocws1-for_automl__parquet-20211020014306-Best:2'),\n              DATA = [dbo].[#unpredicted],\n              RUNTIME = ONNX) WITH ([label] [bigint])\nEND\nGO\n\nEXEC [dbo].[score_w_ml]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "potqv37ta3p6tmagpocws1p1",
+						"poolName": "potqv37ta3p6tmagpocws1p1"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL_run_scoring_stored_proc')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "EXEC [dbo].[score_w_ml]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "potqv37ta3p6tmagpocws1p1",
+						"poolName": "potqv37ta3p6tmagpocws1p1"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/Serverless_SQL_LoadDataFrom_DL')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
@@ -1659,7 +1699,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "3df1fd21-977e-48d9-bd69-f7f9398309f2"
+						"spark.autotune.trackingId": "e2108952-e94b-40bd-9ef6-948d2ef026ac"
 					}
 				},
 				"metadata": {
@@ -1699,7 +1739,7 @@
 							"from azureml.data.dataset_factory import TabularDatasetFactory"
 						],
 						"outputs": [],
-						"execution_count": 5
+						"execution_count": 2
 					},
 					{
 						"cell_type": "code",
@@ -1711,7 +1751,7 @@
 							"experiment = Experiment(ws, experiment_name)"
 						],
 						"outputs": [],
-						"execution_count": 6
+						"execution_count": 3
 					},
 					{
 						"cell_type": "code",
@@ -1722,7 +1762,7 @@
 							"dataset = TabularDatasetFactory.register_spark_dataframe(df, datastore, name = experiment_name + \"-dataset\")"
 						],
 						"outputs": [],
-						"execution_count": 7
+						"execution_count": 4
 					},
 					{
 						"cell_type": "code",
@@ -1732,12 +1772,13 @@
 							"                             training_data = dataset,\n",
 							"                             label_column_name = \"tipped\",\n",
 							"                             primary_metric = \"accuracy\",\n",
-							"                             experiment_timeout_hours = 0.5,\n",
+							"                             experiment_timeout_hours = 0.25,\n",
 							"                             max_concurrent_iterations = 2,\n",
+							"                             allowed_models = [\"LightGBM\"],\n",
 							"                             enable_onnx_compatible_models = True)"
 						],
 						"outputs": [],
-						"execution_count": 8
+						"execution_count": 7
 					},
 					{
 						"cell_type": "code",
@@ -1745,7 +1786,7 @@
 							"run = experiment.submit(automl_config)"
 						],
 						"outputs": [],
-						"execution_count": 9
+						"execution_count": 8
 					},
 					{
 						"cell_type": "code",
@@ -1753,7 +1794,7 @@
 							"displayHTML(\"<a href={} target='_blank'>Your experiment in Azure Machine Learning portal: {}</a>\".format(run.get_portal_url(), run.id))"
 						],
 						"outputs": [],
-						"execution_count": 10
+						"execution_count": 9
 					},
 					{
 						"cell_type": "code",
@@ -1772,7 +1813,7 @@
 							"run.wait_for_completion()"
 						],
 						"outputs": [],
-						"execution_count": 12
+						"execution_count": 10
 					},
 					{
 						"cell_type": "code",
@@ -1832,7 +1873,7 @@
 							"    mlflow.register_model(\"runs:/\" + run.info.run_id + \"/\" + artifact_path, \"potqv37ta3p6tmagpocws1-for_automl__parquet-20211020014306-Best\")"
 						],
 						"outputs": [],
-						"execution_count": 13
+						"execution_count": 11
 					},
 					{
 						"cell_type": "code",
@@ -1878,7 +1919,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "9a98142e-de7c-48f5-8719-3df86613ee41"
+						"spark.autotune.trackingId": "7d2ec689-1f9f-4161-9b5b-4091c86f8fa5"
 					}
 				},
 				"metadata": {
@@ -1903,12 +1944,15 @@
 						"sparkVersion": "2.4",
 						"nodeCount": 5,
 						"cores": 4,
-						"memory": 28
-					}
+						"memory": 28,
+						"automaticScaleJobs": false
+					},
+					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"# Predict NYC Taxi Tips using Spark ML and Azure Open Datasets\n",
 							"\n",
@@ -1921,6 +1965,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"import matplotlib.pyplot as plt\n",
 							"\n",
@@ -1939,10 +1984,11 @@
 							"from pyspark.ml.evaluation import BinaryClassificationEvaluator"
 						],
 						"outputs": [],
-						"execution_count": 1
+						"execution_count": 2
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Ingest Data¶ \n",
 							"\n",
@@ -1951,6 +1997,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"# Import NYC yellow cab data from Azure Open Datasets\n",
 							"from azureml.opendatasets import NycTlcYellow\n",
@@ -1965,19 +2012,21 @@
 							"nyc_tlc_df = nyc_tlc.to_spark_dataframe()"
 						],
 						"outputs": [],
-						"execution_count": 2
+						"execution_count": 3
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"#To make development easier, faster and less expensive downsample for now\n",
 							"sampled_taxi_df = nyc_tlc_df.sample(True, 0.001, seed=1234)"
 						],
 						"outputs": [],
-						"execution_count": 3
+						"execution_count": 4
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Exploratory Data Analysis\n",
 							"\n",
@@ -1986,6 +2035,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"#The charting package needs a Pandas dataframe or numpy array do the conversion\n",
 							"sampled_taxi_pd_df = sampled_taxi_df.toPandas()\n",
@@ -2016,10 +2066,11 @@
 							"plt.show()"
 						],
 						"outputs": [],
-						"execution_count": 4
+						"execution_count": 5
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Data Prep and Featurization\n",
 							"\n",
@@ -2031,6 +2082,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"taxi_df = sampled_taxi_df.select('totalAmount', 'fareAmount', 'tipAmount', 'paymentType', 'rateCodeId', 'passengerCount'\\\n",
 							"                                , 'tripDistance', 'tpepPickupDateTime', 'tpepDropoffDateTime'\\\n",
@@ -2049,10 +2101,11 @@
 							"                                )"
 						],
 						"outputs": [],
-						"execution_count": 5
+						"execution_count": 6
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Data Prep and Featurization Part 2\n",
 							"\n",
@@ -2064,6 +2117,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"taxi_featurised_df = taxi_df.select('totalAmount', 'fareAmount', 'tipAmount', 'paymentType', 'passengerCount'\\\n",
 							"                                                , 'tripDistance', 'weekdayString', 'pickupHour','tripTimeSecs','tipped'\\\n",
@@ -2076,10 +2130,11 @@
 							"                                       .filter((taxi_df.tripTimeSecs >= 30) & (taxi_df.tripTimeSecs <= 7200))"
 						],
 						"outputs": [],
-						"execution_count": 6
+						"execution_count": 7
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Encoding\n",
 							"\n",
@@ -2093,6 +2148,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"# The sample uses an algorithm that only works with numeric features convert them so they can be consumed\n",
 							"sI1 = StringIndexer(inputCol=\"trafficTimeBins\", outputCol=\"trafficTimeBinsIndex\"); \n",
@@ -2104,10 +2160,11 @@
 							"encoded_final_df = Pipeline(stages=[sI1, en1, sI2, en2]).fit(taxi_featurised_df).transform(taxi_featurised_df)"
 						],
 						"outputs": [],
-						"execution_count": 7
+						"execution_count": 8
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Generation of Testing and Training Data Sets\n",
 							"Simple split, 70% for training and 30% for testing the model. Playing with this ratio may result in different models.\n",
@@ -2116,6 +2173,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"# Decide on the split between training and testing data from the dataframe \n",
 							"trainingFraction = 0.7\n",
@@ -2126,10 +2184,11 @@
 							"train_data_df, test_data_df = encoded_final_df.randomSplit([trainingFraction, testingFraction], seed=seed)"
 						],
 						"outputs": [],
-						"execution_count": 8
+						"execution_count": 9
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Train the Model\n",
 							"\n",
@@ -2138,6 +2197,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"## Create a new LR object for the model\n",
 							"logReg = LogisticRegression(maxIter=10, regParam=0.3, labelCol = 'tipped')\n",
@@ -2162,10 +2222,11 @@
 							"print(\"Area under ROC = %s\" % metrics.areaUnderROC)"
 						],
 						"outputs": [],
-						"execution_count": 9
+						"execution_count": 10
 					},
 					{
 						"cell_type": "markdown",
+						"metadata": {},
 						"source": [
 							"## Evaluate and Visualize\n",
 							"\n",
@@ -2175,6 +2236,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"## Plot the ROC curve, no need for pandas as this uses the modelSummary object\n",
 							"modelSummary = lrModel.stages[-1].summary\n",
@@ -2187,7 +2249,7 @@
 							"plt.show()"
 						],
 						"outputs": [],
-						"execution_count": 10
+						"execution_count": 11
 					},
 					{
 						"cell_type": "markdown",
@@ -2221,7 +2283,7 @@
 							"df = predictions.select('pickupHour', 'passengerCount', 'tripTimeSecs', 'tripDistance', 'fareAmount', 'paymentType', 'tipped', 'prediction')"
 						],
 						"outputs": [],
-						"execution_count": 38
+						"execution_count": 12
 					},
 					{
 						"cell_type": "code",
@@ -2242,7 +2304,7 @@
 							"# RH: todo report on predictions entire table"
 						],
 						"outputs": [],
-						"execution_count": 32
+						"execution_count": 13
 					},
 					{
 						"cell_type": "code",
@@ -2262,7 +2324,7 @@
 							"# spark.sql('CREATE DATABASE stable_spark')"
 						],
 						"outputs": [],
-						"execution_count": 12
+						"execution_count": 14
 					},
 					{
 						"cell_type": "code",
@@ -2321,7 +2383,7 @@
 							"    return (table_name, path)"
 						],
 						"outputs": [],
-						"execution_count": 33
+						"execution_count": 15
 					},
 					{
 						"cell_type": "code",
@@ -2340,7 +2402,7 @@
 							"create_spark_table(df, 'stable_spark.ml_predictions', 'parquet', None)"
 						],
 						"outputs": [],
-						"execution_count": 41
+						"execution_count": 16
 					},
 					{
 						"cell_type": "code",
@@ -2360,7 +2422,7 @@
 							"# 'abfss://dlspotpocfs1@potqv37ta3p6tmagpoc.dfs.core.windows.net/synapse/spark/stable_spark.ml_predictions__parquet')"
 						],
 						"outputs": [],
-						"execution_count": 16
+						"execution_count": 17
 					},
 					{
 						"cell_type": "markdown",
@@ -2394,7 +2456,7 @@
 							"df.registerTempTable('TmpDf')"
 						],
 						"outputs": [],
-						"execution_count": 39
+						"execution_count": 18
 					},
 					{
 						"cell_type": "code",
@@ -2418,7 +2480,7 @@
 							"scala_df.write.synapsesql(\"potqv37ta3p6tmagpocws1p1.dbo.ml_predictions__from_spark\", Constants.INTERNAL)"
 						],
 						"outputs": [],
-						"execution_count": 40
+						"execution_count": 20
 					},
 					{
 						"cell_type": "markdown",
@@ -2452,7 +2514,7 @@
 							"forautoml_df = predictions.select('pickupHour', 'passengerCount', 'tripTimeSecs', 'tripDistance', 'fareAmount', 'paymentType', 'tipped')"
 						],
 						"outputs": [],
-						"execution_count": 36
+						"execution_count": 26
 					},
 					{
 						"cell_type": "code",
@@ -2471,7 +2533,7 @@
 							"create_spark_table(forautoml_df, 'stable_spark.for_automl', 'parquet', None)"
 						],
 						"outputs": [],
-						"execution_count": 42
+						"execution_count": 27
 					},
 					{
 						"cell_type": "code",
@@ -2490,7 +2552,7 @@
 							"forautoml_df.registerTempTable('TmpDf')"
 						],
 						"outputs": [],
-						"execution_count": 43
+						"execution_count": null
 					},
 					{
 						"cell_type": "code",
@@ -2514,7 +2576,7 @@
 							"scala_df.write.synapsesql(\"potqv37ta3p6tmagpocws1p1.dbo.unpredicted\", Constants.INTERNAL)"
 						],
 						"outputs": [],
-						"execution_count": 44
+						"execution_count": null
 					},
 					{
 						"cell_type": "code",
