@@ -1,0 +1,17 @@
+{
+	"name": "SQL_run_scoring_stored_proc",
+	"properties": {
+		"content": {
+			"query": "EXEC [dbo].[score_w_ml]",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "potqv37ta3p6tmagpocws1p1",
+				"poolName": "potqv37ta3p6tmagpocws1p1"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"name": "SQL_Define_ml_scoring_stored_proc",
+	"properties": {
+		"content": {
+			"query": "DROP PROCEDURE [dbo].[score_w_ml]; \nGO\n\nCREATE PROCEDURE [dbo].[score_w_ml]\nAS\nBEGIN\n\nSELECT\n    CAST([pickupHour] AS [varchar]) AS [pickupHour],\n    CAST([passengerCount] AS [bigint]) AS [passengerCount],\n    [tripTimeSecs],\n    CAST([tripDistance] AS [real]) AS [tripDistance],\n    CAST([fareAmount] AS [real]) AS [fareAmount],\n    CAST([paymentType] AS [varchar]) AS [paymentType]\n    --,CAST(0 AS [real]) AS [tipped]\nINTO [dbo].[#unpredicted]\nFROM [dbo].[unpredicted];\n\nSELECT * FROM PREDICT (MODEL = (SELECT [model] FROM dbo.ml_models WHERE [ID] = 'potqv37ta3p6tmagpocws1-for_automl__parquet-20211020014306-Best:2'),\n              DATA = [dbo].[#unpredicted],\n              RUNTIME = ONNX) WITH ([label] [bigint])\nEND\nGO\n\nEXEC [dbo].[score_w_ml]",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "potqv37ta3p6tmagpocws1p1",
+				"poolName": "potqv37ta3p6tmagpocws1p1"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
