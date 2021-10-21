@@ -1,0 +1,28 @@
+{
+	"name": "MLScoringPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "ML Scoring stored proc",
+				"type": "SqlPoolStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"sqlPool": {
+					"referenceName": "potqv37ta3p6tmagpocws1p1",
+					"type": "SqlPoolReference"
+				},
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[score_w_ml]"
+				}
+			}
+		],
+		"annotations": []
+	}
+}
